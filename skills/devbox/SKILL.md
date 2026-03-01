@@ -1,54 +1,54 @@
 ---
 name: devbox
-description: 启动AI编码agent自动实现和回测交易策略
+description: Launch AI coding agent to automatically implement and backtest trading strategies
 version: 0.1.0
 ---
 
 # Devbox Skill
 
-AI agent自动写代码、跑回测、出报告。
+AI agent that automatically writes code, runs backtests, and generates reports.
 
-## 使用方式
+## Usage
 
-直接用自然语言描述策略：
-
-```
-/devbox "BTC价格低于0.3时买入，高于0.5时卖出"
-```
-
-或
+Describe your strategy in natural language:
 
 ```
-/devbox 测试一个ETH布林带策略
+/devbox "BTC buy below 0.3, sell above 0.5"
 ```
 
-## 工作流程
+or
 
-1. 理解策略描述
-2. 启动 subagent 执行回测（使用 Agent tool）
-3. Subagent 在后台执行：
-   - 找到 devbox 命令位置（`which devbox` 或使用 skill 目录推导）
-   - 执行 `devbox start "策略描述"`
-   - 等待完成后执行 `devbox result <run_id>`
-   - 返回结果
-4. 主 agent 接收结果后展示并给出建议
+```
+/devbox test an ETH Bollinger Bands strategy
+```
 
-**重要**:
-- 使用 `Agent` tool 启动 subagent，`run_in_background: true`
-- Skill 目录在 `~/.claude/skills/devbox`，可通过软链接找到项目根目录
-- 主 agent 不阻塞，可以继续对话
+## Workflow
 
-## 产物位置
+1. Understand the strategy description
+2. Launch subagent to execute backtest (using Agent tool)
+3. Subagent runs in background:
+   - Find devbox command location (`which devbox` or derive from skill directory)
+   - Execute `devbox start "strategy description"`
+   - Wait for completion, then execute `devbox result <run_id>`
+   - Return results
+4. Main agent displays results and provides suggestions
+
+**Important**:
+- Use `Agent` tool to launch subagent with `run_in_background: true`
+- Skill directory is at `~/.claude/skills/devbox`, can find project root via symlink
+- Main agent remains non-blocking and can continue conversation
+
+## Output Artifacts
 
 `~/.devbox/runs/<run_id>/workspace/output/`:
-- `strategy.rs` - 策略代码
-- `metrics.json` - 回测指标
-- `report.md` - 分析报告
-- `backtest_events.jsonl` - 交易记录
+- `strategy.rs` - Strategy code
+- `metrics.json` - Backtest metrics
+- `report.md` - Analysis report
+- `backtest_events.jsonl` - Trade records
 
-## 注意
+## Note
 
-当前为mock实现，演示完整流程。未来接入真实Rust回测引擎。
+Current implementation is a mock for demonstration. Future versions will integrate with real Rust backtesting engine.
 
 ---
 
