@@ -1,0 +1,257 @@
+#!/bin/bash
+# Devbox CLI - 纯shell实现
+
+set -e
+
+RUNS_DIR="${DEVBOX_RUNS_DIR:-$HOME/.devbox/runs}"
+
+cmd_start() {
+    local task="$*"
+    if [ -z "$task" ]; then
+        echo "错误: 需要提供策略描述"
+        exit 1
+    fi
+
+    local run_id="run-$(date +%s)"
+    local run_dir="$RUNS_DIR/$run_id"
+
+    echo "✓ 创建运行: $run_id"
+
+    # 创建目录
+    mkdir -p "$run_dir/workspace/output"
+    mkdir -p "$run_dir/CONTROL"
+
+    # 写入TASK.md
+    cat > "$run_dir/TASK.md" <<EOF
+# 策略回测任务
+
+$task
+EOF
+
+    # 初始状态
+    cat > "$run_dir/STATUS.json" <<EOF
+{
+  "run_id": "$run_id",
+  "state": "pending",
+  "phase": "initializing",
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "error": null
+}
+EOF
+
+    echo "✓ 环境已准备"
+    echo "Agent正在工作..."
+    echo
+
+    # 同步执行
+    mock_execute "$run_dir" "$run_id" "$task"
+
+    echo
+    echo "✓ 完成! 查看结果: devbox result $run_id"
+}
+
+mock_execute() {
+    local run_dir="$1"
+    local run_id="$2"
+    local task="$3"
+
+    local phases=(
+        "copying_template:复制模板:0.5"
+        "implementing:实现策略:2"
+        "building:编译代码:1.5"
+        "running_backtest:运行回测:1"
+        "analyzing:分析结果:0.8"
+        "writing_report:生成报告:0.5"
+    )
+
+    # 更新为running
+    update_status "$run_dir" "$run_id" "running" "started"
+
+    for phase_spec in "${phases[@]}"; do
+        IFS=':' read -r phase label duration <<< "$phase_spec"
+
+        echo "  → $label"
+        sleep "$duration"
+        update_status "$run_dir" "$run_id" "running" "$phase"
+        append_event "$run_dir" "phase_changed" "$phase"
+    done
+
+    # 生成产物
+    generate_artifacts "$run_dir" "$task"
+
+    # 完成
+    update_status "$run_dir" "$run_id" "completed" "done"
+    write_handoff "$run_dir" "$run_id"
+}
+
+update_status() {
+    local run_dir="$1"
+    local run_id="$2"
+    local state="$3"
+    local phase="$4"
+
+    cat > "$run_dir/STATUS.json" <<EOF
+{
+  "run_id": "$run_id",
+  "state": "$state",
+  "phase": "$phase",
+  "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "error": null
+}
+EOF
+}
+
+append_event() {
+    local run_dir="$1"
+    local event="$2"
+    local phase="$3"
+
+    echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"event\":\"$event\",\"phase\":\"$phase\"}" >> "$run_dir/EVENTS.log"
+}
+
+generate_artifacts() {
+    local run_dir="$1"
+    local task="$2"
+    local output_dir="$run_dir/workspace/output"
+
+    # strategy.rs
+    cat > "$output_dir/strategy.rs" <<EOF
+// 策略实现
+pub struct Strategy;
+// $task
+EOF
+
+    # metrics.json
+    cat > "$output_dir/metrics.json" <<EOF
+{
+  "total_return": 0.152,
+  "win_rate": 0.62,
+  "sharpe_ratio": 1.8,
+  "max_drawdown": -0.08,
+  "trade_count": 47
+}
+EOF
+
+    # report.md
+    cat > "$output_dir/report.md" <<EOF
+# 回测报告
+
+## 策略
+$task
+
+## 结果
+- 收益: +15.2%
+- 胜率: 62%
+- 夏普: 1.8
+
+## 结论
+策略可行，建议优化入场时机。
+EOF
+
+    # backtest_events.jsonl
+    echo '{"ts":"2025-01-15T10:00:00Z","event":"trade","side":"buy","price":0.28}' > "$output_dir/backtest_events.jsonl"
+}
+
+write_handoff() {
+    local run_dir="$1"
+    local run_id="$2"
+
+    cat > "$run_dir/HANDOFF.md" <<EOF
+# Run $run_id - Completed
+
+## 产物
+- strategy.rs
+- metrics.json
+- report.md
+- backtest_events.jsonl
+EOF
+}
+
+show_progress() {
+    # 不再需要，已改为同步执行
+    :
+}
+
+cmd_status() {
+    local run_id="$1"
+    if [ -z "$run_id" ]; then
+        echo "错误: 需要提供run_id"
+        exit 1
+    fi
+
+    local status_file="$RUNS_DIR/$run_id/STATUS.json"
+    if [ ! -f "$status_file" ]; then
+        echo "错误: 运行 $run_id 不存在"
+        exit 1
+    fi
+
+    cat "$status_file"
+}
+
+cmd_result() {
+    local run_id="$1"
+    if [ -z "$run_id" ]; then
+        echo "错误: 需要提供run_id"
+        exit 1
+    fi
+
+    local handoff_file="$RUNS_DIR/$run_id/HANDOFF.md"
+    if [ ! -f "$handoff_file" ]; then
+        echo "错误: 运行 $run_id 尚未完成"
+        exit 1
+    fi
+
+    local metrics_file="$RUNS_DIR/$run_id/workspace/output/metrics.json"
+    local report_file="$RUNS_DIR/$run_id/workspace/output/report.md"
+
+    echo
+    echo "=== 回测结果 ==="
+    echo
+
+    if [ -f "$metrics_file" ]; then
+        local return=$(jq -r '.total_return * 100' "$metrics_file")
+        local win_rate=$(jq -r '.win_rate * 100' "$metrics_file")
+        local sharpe=$(jq -r '.sharpe_ratio' "$metrics_file")
+        local drawdown=$(jq -r '.max_drawdown * 100' "$metrics_file")
+        local trades=$(jq -r '.trade_count' "$metrics_file")
+
+        echo "指标:"
+        printf "  收益: %.1f%%\n" "$return"
+        printf "  胜率: %.0f%%\n" "$win_rate"
+        printf "  夏普: %.1f\n" "$sharpe"
+        printf "  最大回撤: %.1f%%\n" "$drawdown"
+        echo "  交易次数: $trades"
+        echo
+    fi
+
+    if [ -f "$report_file" ]; then
+        echo "完整报告:"
+        cat "$report_file"
+    fi
+
+    echo
+    echo "产物位置: $RUNS_DIR/$run_id/workspace/output"
+}
+
+# Main
+case "${1:-}" in
+    start)
+        shift
+        cmd_start "$@"
+        ;;
+    status)
+        cmd_status "$2"
+        ;;
+    result)
+        cmd_result "$2"
+        ;;
+    *)
+        echo "用法:"
+        echo "  devbox start <策略描述>"
+        echo "  devbox status <run_id>"
+        echo "  devbox result <run_id>"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,21 @@
+{
+  "name": "devbox-poc",
+  "version": "0.3.0",
+  "description": "AI编码agent自动实现和回测交易策略",
+  "bin": {
+    "devbox": "bin/devbox"
+  },
+  "scripts": {
+    "postinstall": "echo '✓ devbox命令已安装，可通过 devbox start 使用'",
+    "dev": "npm run link:claude && echo '✓ Skill已安装到 ~/.claude/skills/devbox'",
+    "link:claude": "mkdir -p ~/.claude/skills && ln -sfn $(pwd)/skills/devbox ~/.claude/skills/devbox"
+  },
+  "keywords": [
+    "devbox",
+    "agent",
+    "backtest",
+    "trading"
+  ],
+  "author": "",
+  "license": "MIT"
+}
