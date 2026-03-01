@@ -2,71 +2,96 @@
 
 AI agent that automatically implements and backtests trading strategies.
 
-## Installation
+## Quick Start
 
-In Claude Code, say:
+### For Claude Code
 
 ```
 Install devbox skill from https://github.com/uu-z/devbox-skill
 ```
 
-Claude will automatically:
-1. Clone the repository
-2. Install skill to `~/.claude/skills/devbox`
-3. Set up the devbox command
+Then restart your session and try:
+```
+/devbox "BTC buy below 0.3, sell above 0.5"
+```
 
-### Verify Installation
+### For OpenClaw
 
-Check that the skill is installed correctly:
+```
+从 https://github.com/uu-z/devbox-skill 安装 skill
+```
+
+Then restart gateway:
+```
+openclaw gateway restart
+```
+
+Or in OpenClaw chat:
+```
+重启 gateway
+```
+
+Then try:
+```
+/devbox "BTC价格低于0.3时买入，高于0.5时卖出"
+```
+
+## Verify Installation
+
+After installation, check:
 
 ```bash
-# Check skill directory exists
+# Check skill is installed
 ls ~/.claude/skills/devbox/skills/devbox/SKILL.md
 
-# Check command is available
+# Check command exists
 ls ~/.claude/skills/devbox/bin/devbox
 ```
 
-**Expected output**: Both files should exist.
+Both files should exist.
 
-### Test the Skill
+## Post-Installation Test
 
-Restart your Claude Code session, then try:
-
+**Test command**:
 ```
-/devbox "BTC buy below 0.3, sell above 0.5"
+/devbox "test strategy: BTC buy low sell high"
 ```
 
 **Expected behavior**:
 - ✓ Subagent starts in background
-- ✓ Main agent remains responsive
-- ✓ Results returned with contextual suggestions
+- ✓ Progress updates shown
+- ✓ Results returned with metrics
+- ✓ Contextual suggestions provided
 - ✓ Artifacts saved to `~/.devbox/runs/<run_id>/workspace/output/`
+
+**If it doesn't work**:
+1. Restart your Claude Code session or OpenClaw gateway
+2. Check installation with commands above
+3. See Troubleshooting section below
 
 ## Usage
 
+Natural language strategy description:
+
 ```
 /devbox "BTC buy below 0.3, sell above 0.5"
-```
-
-or
-
-```
-/devbox test an ETH Bollinger Bands strategy
+/devbox "test an ETH Bollinger Bands strategy"
+/devbox "SOL RSI oversold buy strategy"
 ```
 
 ## Features
 
-- Natural language strategy description
-- Background execution (non-blocking)
-- Intelligent result analysis
-- Dynamic next-step suggestions
+- 🗣️ Natural language input
+- ⚡ Background execution (non-blocking)
+- 📊 Automatic result analysis
+- 💡 Dynamic next-step suggestions
+- 📁 Complete artifacts (code + metrics + report)
 
 ## Output Artifacts
 
 Each run generates:
-- `strategy.rs` - Strategy code
-- `metrics.json` - Backtest metrics
+- `strategy.rs` - Strategy implementation
+- `metrics.json` - Backtest metrics (return, win rate, Sharpe, drawdown)
 - `report.md` - Analysis report
 - `backtest_events.jsonl` - Trade records
 
@@ -74,30 +99,56 @@ Location: `~/.devbox/runs/<run_id>/workspace/output/`
 
 ## Troubleshooting
 
-### Skill not found
+### Skill not found after installation
 
+**Claude Code**:
 ```bash
-# Reinstall
 cd ~/.claude/skills
 rm -rf devbox
 git clone https://github.com/uu-z/devbox-skill.git devbox
 ```
-
 Then restart Claude Code session.
 
-### Command not found
-
-The skill uses dynamic path resolution. If you see "command not found", check:
-
+**OpenClaw**:
 ```bash
-ls ~/.claude/skills/devbox/bin/devbox
+cd ~/.claude/skills
+rm -rf devbox
+git clone https://github.com/uu-z/devbox-skill.git devbox
+openclaw gateway restart
 ```
 
-If the file exists, the skill will find it automatically.
+### Command not working
 
-## Development
+1. **Verify installation**:
+   ```bash
+   ls ~/.claude/skills/devbox/bin/devbox
+   ```
 
-Current implementation is a mock for demonstration. Future versions will integrate with real Rust backtesting engine.
+2. **Check skill is loaded**:
+   - Claude Code: Restart session
+   - OpenClaw: Run `openclaw gateway restart`
+
+3. **Test with simple command**:
+   ```
+   /devbox "test"
+   ```
+
+### No suggestions after results
+
+This means the skill loaded an old cached version. Restart your session to load the latest SKILL.md.
+
+## Development Status
+
+Current: Mock implementation for demonstration
+- Fixed metrics for all strategies
+- Simulated execution phases
+- Complete file protocol demonstration
+
+Future: Integration with real Rust backtesting engine
+
+## Contributing
+
+Issues and PRs welcome at https://github.com/uu-z/devbox-skill
 
 ## License
 
