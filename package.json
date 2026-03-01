@@ -6,7 +6,6 @@
     "devbox": "bin/devbox"
   },
   "scripts": {
-    "postinstall": "mkdir -p ~/.claude/skills && ln -sfn $(npm root -g)/devbox-poc/skills/devbox ~/.claude/skills/devbox && echo '✓ devbox 命令和 skill 已安装'",
     "dev": "npm run link:claude && echo '✓ Skill已安装到 ~/.claude/skills/devbox'",
     "link:claude": "mkdir -p ~/.claude/skills && ln -sfn $(pwd)/skills/devbox ~/.claude/skills/devbox"
   },
