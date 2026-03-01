@@ -6,7 +6,7 @@
     "devbox": "bin/devbox"
   },
   "scripts": {
-    "postinstall": "echo '✓ devbox命令已安装，可通过 devbox start 使用'",
+    "postinstall": "mkdir -p ~/.claude/skills && ln -sfn $(npm root -g)/devbox-poc/skills/devbox ~/.claude/skills/devbox && echo '✓ devbox 命令和 skill 已安装'",
     "dev": "npm run link:claude && echo '✓ Skill已安装到 ~/.claude/skills/devbox'",
     "link:claude": "mkdir -p ~/.claude/skills && ln -sfn $(pwd)/skills/devbox ~/.claude/skills/devbox"
   },
@@ -14,8 +14,14 @@
     "devbox",
     "agent",
     "backtest",
-    "trading"
+    "trading",
+    "claude-code",
+    "skill"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/devbox-poc.git"
+  }
 }
