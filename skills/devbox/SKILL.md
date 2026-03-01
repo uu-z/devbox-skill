@@ -25,9 +25,18 @@ AI agent自动写代码、跑回测、出报告。
 ## 工作流程
 
 1. 理解策略描述
-2. 调用 `devbox start "策略描述"` 启动回测
-3. 等待完成后调用 `devbox result <run_id>` 获取结果
-4. 展示结果
+2. 启动 subagent 执行回测（使用 Agent tool）
+3. Subagent 在后台执行：
+   - 找到 devbox 命令位置（`which devbox` 或使用 skill 目录推导）
+   - 执行 `devbox start "策略描述"`
+   - 等待完成后执行 `devbox result <run_id>`
+   - 返回结果
+4. 主 agent 接收结果后展示并给出建议
+
+**重要**:
+- 使用 `Agent` tool 启动 subagent，`run_in_background: true`
+- Skill 目录在 `~/.claude/skills/devbox`，可通过软链接找到项目根目录
+- 主 agent 不阻塞，可以继续对话
 
 ## 产物位置
 
