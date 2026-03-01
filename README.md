@@ -1,49 +1,104 @@
 # Devbox Skill
 
-AI编码agent自动实现和回测交易策略。
+AI agent that automatically implements and backtests trading strategies.
 
-## 安装
+## Installation
 
-在 Claude Code 中说：
-
-```
-从 https://github.com/yourusername/devbox-poc 安装 devbox skill
-```
-
-Claude 会自动：
-1. Clone 仓库
-2. 安装 skill 到 `~/.claude/skills/devbox`
-3. 设置 devbox 命令
-
-## 使用
+In Claude Code, say:
 
 ```
-/devbox "BTC价格低于0.3时买入，高于0.5时卖出"
+Install devbox skill from https://github.com/uu-z/devbox-skill
 ```
 
-或
+Claude will automatically:
+1. Clone the repository
+2. Install skill to `~/.claude/skills/devbox`
+3. Set up the devbox command
+
+### Verify Installation
+
+Check that the skill is installed correctly:
+
+```bash
+# Check skill directory exists
+ls ~/.claude/skills/devbox/skills/devbox/SKILL.md
+
+# Check command is available
+ls ~/.claude/skills/devbox/bin/devbox
+```
+
+**Expected output**: Both files should exist.
+
+### Test the Skill
+
+Restart your Claude Code session, then try:
 
 ```
-/devbox 测试一个ETH布林带策略
+/devbox "BTC buy below 0.3, sell above 0.5"
 ```
 
-## 特性
+**Expected behavior**:
+- ✓ Subagent starts in background
+- ✓ Main agent remains responsive
+- ✓ Results returned with contextual suggestions
+- ✓ Artifacts saved to `~/.devbox/runs/<run_id>/workspace/output/`
 
-- 自然语言描述策略
-- 后台自动执行回测
-- 智能分析结果
-- 动态建议下一步
+## Usage
 
-## 产物
+```
+/devbox "BTC buy below 0.3, sell above 0.5"
+```
 
-每次运行生成：
-- `strategy.rs` - 策略代码
-- `metrics.json` - 回测指标
-- `report.md` - 分析报告
-- `backtest_events.jsonl` - 交易记录
+or
 
-位置：`~/.devbox/runs/<run_id>/workspace/output/`
+```
+/devbox test an ETH Bollinger Bands strategy
+```
 
-## 注意
+## Features
 
-当前为 mock 实现，演示完整流程。未来接入真实 Rust 回测引擎。
+- Natural language strategy description
+- Background execution (non-blocking)
+- Intelligent result analysis
+- Dynamic next-step suggestions
+
+## Output Artifacts
+
+Each run generates:
+- `strategy.rs` - Strategy code
+- `metrics.json` - Backtest metrics
+- `report.md` - Analysis report
+- `backtest_events.jsonl` - Trade records
+
+Location: `~/.devbox/runs/<run_id>/workspace/output/`
+
+## Troubleshooting
+
+### Skill not found
+
+```bash
+# Reinstall
+cd ~/.claude/skills
+rm -rf devbox
+git clone https://github.com/uu-z/devbox-skill.git devbox
+```
+
+Then restart Claude Code session.
+
+### Command not found
+
+The skill uses dynamic path resolution. If you see "command not found", check:
+
+```bash
+ls ~/.claude/skills/devbox/bin/devbox
+```
+
+If the file exists, the skill will find it automatically.
+
+## Development
+
+Current implementation is a mock for demonstration. Future versions will integrate with real Rust backtesting engine.
+
+## License
+
+MIT
