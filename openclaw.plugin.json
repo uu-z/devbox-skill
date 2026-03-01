@@ -1,0 +1,17 @@
+{
+  "name": "devbox",
+  "version": "0.3.0",
+  "description": "AI编码agent自动实现和回测交易策略",
+  "skills": [
+    {
+      "name": "devbox",
+      "path": "skills/devbox/SKILL.md"
+    }
+  ],
+  "commands": [
+    {
+      "name": "devbox",
+      "path": "bin/devbox"
+    }
+  ]
+}

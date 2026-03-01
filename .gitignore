@@ -6,6 +6,9 @@ dist/
 # 运行产物现在在用户目录
 # ~/.devbox/runs/
 
+# 文档不对外泄露
+docs/
+
 # IDE
 .vscode/
 .idea/
