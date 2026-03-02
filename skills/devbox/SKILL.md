@@ -1,64 +1,71 @@
 ---
 name: devbox
-description: Launch AI coding agent to automatically implement and backtest trading strategies
-version: 0.1.0
+description: Launch AI coding agent to automatically implement and execute tasks in isolated Incus VM
 ---
 
 # Devbox Skill
 
-AI agent that automatically writes code, runs backtests, and generates reports.
+Launch isolated AI coding agents in Incus VMs to execute tasks autonomously.
+
+## When to Use
+
+- Execute multi-step bash commands in isolated environment
+- Run potentially risky operations safely
+- Need complete Linux environment (not just container)
+- Want to collect structured execution results
 
 ## Usage
 
-Describe your strategy in natural language:
-
 ```
-/devbox "BTC buy below 0.3, sell above 0.5"
+/devbox <task_description>
 ```
 
-or
+## What It Does
 
+1. Creates/reuses Incus VM
+2. Writes task to TASK.md (RFC 002 format)
+3. Launches agent executor
+4. Monitors execution via STATUS.json
+5. Returns HANDOFF.md with results
+
+## Examples
+
+**Run tests in isolation:**
 ```
-/devbox test an ETH Bollinger Bands strategy
+/devbox Run npm install && npm test, collect coverage report
 ```
 
-## Workflow
+**Execute risky script:**
+```
+/devbox Download and run setup.sh from https://example.com/setup.sh
+```
 
-1. Understand the strategy description
-2. Launch subagent to execute backtest (using Agent tool)
-3. Subagent runs in background:
-   - Find devbox command location (`which devbox` or derive from skill directory)
-   - Execute `devbox start "strategy description"`
-   - Wait for completion, then execute `devbox result <run_id>`
-   - Return results
-4. Main agent displays results and provides suggestions
+**Multi-step deployment:**
+```
+/devbox 1. Build Docker image 2. Push to registry 3. Deploy to staging
+```
 
-**Important**:
-- Use `Agent` tool to launch subagent with `run_in_background: true`
-- Skill directory is at `~/.claude/skills/devbox`, can find project root via symlink
-- Main agent remains non-blocking and can continue conversation
+## Implementation
 
-## Output Artifacts
+The skill:
+1. Parses user request into bash steps
+2. Creates task JSON
+3. Calls `devbox start --task <file> --vm <id> --id <run_id>`
+4. Polls `devbox status` until completed/failed
+5. Retrieves `devbox handoff` for results
+6. Cleans up VM if requested
 
-`~/.devbox/runs/<run_id>/workspace/output/`:
-- `strategy.rs` - Strategy code
-- `metrics.json` - Backtest metrics
-- `report.md` - Analysis report
-- `backtest_events.jsonl` - Trade records
+## Output
 
-## Note
+Returns structured handoff:
+- Summary of execution
+- Full command outputs
+- Recommendations
+- Artifacts (if any)
 
-Current implementation is a mock for demonstration. Future versions will integrate with real Rust backtesting engine.
+## Safety
 
----
-
-After completing the backtest and showing results, you MUST provide contextual suggestions for what the user might want to do next. Analyze the strategy description, results, and current context to suggest 3-5 relevant next actions. Examples might include:
-
-- Adjusting specific parameters and re-testing
-- Testing on different markets or timeframes
-- Comparing with alternative strategies
-- Optimizing risk management
-- Viewing detailed artifacts
-- Exploring related strategy variations
-
-Make suggestions specific to the actual strategy and results, not generic templates.
+- Each run in isolated VM
+- No access to host filesystem by default
+- Can destroy VM after completion
+- All operations logged to EVENTS.log

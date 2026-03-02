@@ -1,154 +1,139 @@
-# Devbox Skill
+# Devbox Control Plane
 
-AI agent that automatically implements and backtests trading strategies.
+AI coding agent控制平面，完全符合RFC 002规范。
 
-## Quick Start
+## 快速开始
 
-### For Claude Code
-
-```
-Install devbox skill from https://github.com/uu-z/devbox-skill
-```
-
-Then restart your session and try:
-```
-/devbox "BTC buy below 0.3, sell above 0.5"
-```
-
-### For OpenClaw
-
-```
-从 https://github.com/uu-z/devbox-skill 安装 skill
-```
-
-Then restart gateway:
-```
-openclaw gateway restart
-```
-
-Or in OpenClaw chat:
-```
-重启 gateway
-```
-
-Then try:
-```
-/devbox "BTC价格低于0.3时买入，高于0.5时卖出"
-```
-
-## Verify Installation
-
-After installation, check:
+### 方式 1: Claude Code / OpenClaw Skill (推荐)
 
 ```bash
-# Check skill is installed
-ls ~/.claude/skills/devbox/skills/devbox/SKILL.md
+# 安装 skill
+ln -s $(pwd)/skills/devbox ~/.claude/skills/devbox
 
-# Check command exists
-ls ~/.claude/skills/devbox/bin/devbox
+# 使用
+/devbox echo hello, date, uname -a
 ```
 
-Both files should exist.
+详见 [skills/devbox/INSTALL.md](skills/devbox/INSTALL.md)
 
-## Post-Installation Test
+### 方式 2: 直接使用 CLI
 
-**Test command**:
-```
-/devbox "test strategy: BTC buy low sell high"
-```
-
-**Expected behavior**:
-- ✓ Subagent starts in background
-- ✓ Progress updates shown
-- ✓ Results returned with metrics
-- ✓ Contextual suggestions provided
-- ✓ Artifacts saved to `~/.devbox/runs/<run_id>/workspace/output/`
-
-**If it doesn't work**:
-1. Restart your Claude Code session or OpenClaw gateway
-2. Check installation with commands above
-3. See Troubleshooting section below
-
-## Usage
-
-Natural language strategy description:
-
-```
-/devbox "BTC buy below 0.3, sell above 0.5"
-/devbox "test an ETH Bollinger Bands strategy"
-/devbox "SOL RSI oversold buy strategy"
-```
-
-## Features
-
-- 🗣️ Natural language input
-- ⚡ Background execution (non-blocking)
-- 📊 Automatic result analysis
-- 💡 Dynamic next-step suggestions
-- 📁 Complete artifacts (code + metrics + report)
-
-## Output Artifacts
-
-Each run generates:
-- `strategy.rs` - Strategy implementation
-- `metrics.json` - Backtest metrics (return, win rate, Sharpe, drawdown)
-- `report.md` - Analysis report
-- `backtest_events.jsonl` - Trade records
-
-Location: `~/.devbox/runs/<run_id>/workspace/output/`
-
-## Troubleshooting
-
-### Skill not found after installation
-
-**Claude Code**:
+**快速测试**：
 ```bash
-cd ~/.claude/skills
-rm -rf devbox
-git clone https://github.com/uu-z/devbox-skill.git devbox
-```
-Then restart Claude Code session.
+# 运行 E2E 测试（使用预定义示例）
+./test-e2e.sh
 
-**OpenClaw**:
+# 或手动运行示例任务
+bun run apps/cli/src/devbox.ts start \
+  --task examples/tasks/backtest-ma.md \
+  --vm devbox-default \
+  --id test-001
+```
+
+查看更多示例：[examples/tasks/README.md](examples/tasks/README.md)
+
+#### Linux环境
 ```bash
-cd ~/.claude/skills
-rm -rf devbox
-git clone https://github.com/uu-z/devbox-skill.git devbox
-openclaw gateway restart
+# 安装Incus
+sudo snap install incus
+incus admin init --minimal
+
+# 运行demo
+cd apps/cli
+./demo.sh
 ```
 
-### Command not working
+### macOS/Windows (使用Colima)
+```bash
+# 安装Colima (macOS)
+brew install colima
 
-1. **Verify installation**:
-   ```bash
-   ls ~/.claude/skills/devbox/bin/devbox
-   ```
+# 启动Colima with Incus
+colima start --vm-type=vz --vz-rosetta --mount-type=virtiofs
 
-2. **Check skill is loaded**:
-   - Claude Code: Restart session
-   - OpenClaw: Run `openclaw gateway restart`
+# 在Colima中安装Incus
+colima ssh
+sudo snap install incus
+sudo incus admin init --minimal
+exit
 
-3. **Test with simple command**:
-   ```
-   /devbox "test"
-   ```
+# 运行demo
+cd apps/cli
+./demo.sh
+```
 
-### No suggestions after results
+## 架构
 
-This means the skill loaded an old cached version. Restart your session to load the latest SKILL.md.
+```
+┌──────────────────┐ ┌──────────────────┐ ┌────────────────────┐
+│ Orchestrator │ │ Control Plane │ │ Devbox VM │
+│ (OpenClaw, │ CLI │ │ incus │ │
+│ Claude Code, │ ──────> │ devbox (CLI) │ exec / │ /home/devbox/ │
+│ human) │ │ devboxd (daemon) │ file │ runs/<id>/ │
+│ │ <────── │ │ ────> │ workspace/ │
+│ │ JSON / │ │ │ CONTROL/ │
+│ │ notify │ │ <──── │ coding agent │
+└──────────────────┘ └──────────────────┘ files └────────────────────┘
+```
 
-## Development Status
+## RFC 002功能
 
-Current: Mock implementation for demonstration
-- Fixed metrics for all strategies
-- Simulated execution phases
-- Complete file protocol demonstration
+| 功能 | 状态 |
+|------|------|
+| Incus VM管理 | ✓ |
+| Run生命周期 | ✓ |
+| Agent执行器 | ✓ |
+| 文件协议 (TASK.md, STATUS.json, EVENTS.log, HANDOFF.md) | ✓ |
+| CONTROL/ Steering | ✓ |
+| 状态机 (pending, running, needs_attention, completed, failed, stopped) | ✓ |
+| Daemon监控 | ✓ |
+| Crash detection | ✓ |
+| Webhook通知 | ✓ |
+| OpenClaw集成 | ✓ |
 
-Future: Integration with real Rust backtesting engine
+## 命令
 
-## Contributing
+```bash
+# VM管理
+devbox vm create --id <vm_id> --image <image>
+devbox vm destroy <vm_id>
 
-Issues and PRs welcome at https://github.com/uu-z/devbox-skill
+# Run管理
+devbox start --task <file> --vm <vm_id> --id <run_id>
+devbox status <run_id> --vm <vm_id>
+devbox events <run_id> --vm <vm_id> [--follow]
+devbox list --vm <vm_id>
+devbox stop <run_id> --vm <vm_id>
+
+# Steering
+devbox steer <run_id> --vm <vm_id> --cmd <command> [--instruction <file>]
+
+# 调试
+devbox snapshot <run_id> --vm <vm_id> [--output <file>]
+devbox handoff <run_id> --vm <vm_id>
+devbox get <run_id> --vm <vm_id> --output-dir <path>
+```
+
+## 为什么使用Incus
+
+1. **RFC 002标准** - 完全符合规范
+2. **完整Linux环境** - 系统容器，不是应用容器
+3. **更好的隔离** - CPU/内存/网络独立
+4. **生产就绪** - 稳定可靠
+
+Incus是唯一支持的后端，提供完整的系统容器能力。
+
+## 文档
+
+- [RFC 002](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) - 完整规范
+- [Incus测试指南](docs/TESTING-INCUS.md) - 详细安装和测试
+- [快速开始](QUICKSTART.md) - 5分钟上手
+
+## 下一步
+
+1. ~~实现Agent执行逻辑~~ ✅
+2. ~~与Orchestrator集成~~ ✅
+3. 生产环境部署
 
 ## License
 

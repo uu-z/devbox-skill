@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "npm run link:claude && echo '✓ Skill已安装到 ~/.claude/skills/devbox'",
-    "link:claude": "mkdir -p ~/.claude/skills && ln -sfn $(pwd)/skills/devbox ~/.claude/skills/devbox"
+    "link:claude": "mkdir -p ~/.claude/skills && ln -sfn $(pwd)/skills/devbox ~/.claude/skills/devbox",
+    "link-skill": "node scripts/link-skill.js"
   },
   "keywords": [
     "devbox",
@@ -22,5 +23,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/yourusername/devbox-poc.git"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "execa": "^9.6.1"
   }
 }

@@ -1,0 +1,27 @@
+{
+  "name": "@devbox/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Devbox control plane CLI",
+  "bin": {
+    "devbox": "./dist/devbox.js",
+    "devboxd": "./dist/devboxd.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build src/devbox.ts --outfile=dist/devbox.js --target=bun && bun build src/devboxd.ts --outfile=dist/devboxd.js --target=bun && chmod +x dist/*.js",
+    "dev": "bun run src/devbox.ts",
+    "test": "bun test",
+    "test:integration": "./test-integration.sh",
+    "lint": "echo 'Lint not configured yet'",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@devbox/core": "workspace:*"
+  },
+  "keywords": ["devbox", "cli", "vm", "agent"],
+  "license": "MIT"
+}

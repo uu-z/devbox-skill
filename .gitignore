@@ -7,10 +7,10 @@ dist/
 # ~/.devbox/runs/
 
 # 文档不对外泄露
-docs/
-
+docs
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+.turbo
