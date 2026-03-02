@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
-import { Provisioner, Connector, FileProtocol } from '@devbox/core';
+import { Provisioner, Connector, FileProtocol, generateTaskWithProtocol } from '@devbox/core';
 import type { Status } from '@devbox/core';
 
 const program = new Command();
@@ -62,44 +62,18 @@ program
     }
 
     // Read task file
-    const taskContent = await Bun.file(taskFile).text();
+    const userTaskContent = await Bun.file(taskFile).text();
 
     // Create connector
     const conn = new Connector(vmId);
 
     // Create run directory
     const runDir = `/home/devbox/runs/${runId}`;
-    await conn.execCommand(`mkdir -p ${runDir}/workspace ${runDir}/CONTROL`);
+    await conn.execCommand(`mkdir -p ${runDir}/workspace ${runDir}/CONTROL && chown -R devbox:devbox ${runDir}`);
 
-    // Deploy agent code to VM (one-time setup per VM)
-    const agentBinDir = '/home/devbox/bin';
-    await conn.execCommand(`mkdir -p ${agentBinDir}`);
-
-    // Copy agent-entry.ts
-    const agentEntryPath = new URL('./agent-entry.ts', import.meta.url).pathname;
-    await conn.writeFile(`${agentBinDir}/agent-entry.ts`, await Bun.file(agentEntryPath).text());
-
-    // Copy core package (simplified: just copy the built files)
-    // In production, this should be a proper bundle
-    const coreDir = new URL('../../../packages/core/src', import.meta.url).pathname;
-    await conn.execCommand(`rm -rf ${agentBinDir}/core && mkdir -p ${agentBinDir}/core`);
-
-    // Copy core files recursively
-    const copyCore = async (dir: string, targetPrefix: string = '') => {
-      const entries = await Array.fromAsync(new Bun.Glob('**/*.ts').scan({ cwd: dir }));
-      for (const entry of entries) {
-        const sourcePath = `${dir}/${entry}`;
-        const targetPath = `${agentBinDir}/core/${targetPrefix}${entry}`;
-        const targetDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
-        await conn.execCommand(`mkdir -p ${targetDir}`);
-        await conn.writeFile(targetPath, await Bun.file(sourcePath).text());
-      }
-    };
-    await copyCore(coreDir);
-
-    // Write TASK.md
-    const proto = new FileProtocol(runDir, conn);
-    await proto.writeTask({ description: taskContent });
+    // Generate TASK.md with embedded protocol
+    const taskWithProtocol = generateTaskWithProtocol(userTaskContent, runId);
+    await conn.writeFile(`${runDir}/TASK.md`, taskWithProtocol);
 
     // Write initial STATUS.json
     const status: Status = {
@@ -117,11 +91,20 @@ program
       await conn.writeFile(`${runDir}/TAGS.json`, JSON.stringify(tags, null, 2));
     }
 
-    // Start agent in tmux session
+    // Create startup script for Claude Code
+    const startupScript = `#!/bin/bash
+cd ${runDir}/workspace
+export ANTHROPIC_API_KEY=$(cat /home/devbox/.anthropic_api_key)
+export ANTHROPIC_BASE_URL=https://www.ai-clauder.cc
+claude -p --verbose --output-format=stream-json --dangerously-skip-permissions "$(cat ../TASK.md)" > ../claude.log 2>&1
+`;
+    await conn.writeFile(`${runDir}/start.sh`, startupScript);
+    await conn.execCommand(`chmod +x ${runDir}/start.sh && chown devbox:devbox ${runDir}/start.sh`);
+
+    // Start Claude Code in tmux session (as devbox user)
     const tmuxSession = `run_${runId}`;
-    const bunPath = '/root/.bun/bin/bun';
-    const agentCmd = `cd ${runDir} && ${bunPath} run ${agentBinDir}/agent-entry.ts ${runId}`;
-    await conn.tmuxStart(tmuxSession, agentCmd);
+    const claudeCmd = `su - devbox -c '${runDir}/start.sh'`;
+    await conn.tmuxStart(tmuxSession, claudeCmd);
 
     console.log(JSON.stringify({
       run_id: runId,

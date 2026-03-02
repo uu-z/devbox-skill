@@ -5,6 +5,7 @@ export { IncusConnector as Connector } from './incus/connector';
 export { LocalConnector } from './local/connector';
 
 export { FileProtocol } from './protocol/file-protocol';
+export { generateTaskWithProtocol } from './protocol/task-generator';
 export { AgentExecutor } from './agent/executor';
 
 // Re-export interfaces
