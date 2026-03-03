@@ -1,67 +1,99 @@
 # Devbox - AI Agent Orchestrator
 
-基于 [nanoclaw](https://github.com/qwibitai/nanoclaw) 的 AI 编码 agent 编排系统，支持 Discord/Slack 多人协作。
+An AI coding agent orchestration system built on [nanoclaw](https://github.com/qwibitai/nanoclaw), with Discord/Slack multi-user collaboration support.
 
-## 快速开始
+## Quick Start
 
 ```bash
 cd apps/nanoclaw
 
-# 1. 安装依赖
+# 1. Install dependencies
 npm install
 
-# 2. 配置环境变量
+# 2. Configure environment variables
 cp .env.example .env
-# 编辑 .env，填入 ANTHROPIC_API_KEY 和频道 token
+# Edit .env and fill in ANTHROPIC_API_KEY and channel tokens
 
-# 3. 构建 Docker 镜像
+# 3. Build the Docker image
 cd container && ./build.sh
 
-# 4. 启动服务
+# 4. Start the service
 npm run dev
 ```
 
-## 架构
+## Architecture
 
 ```
-Discord/Slack
-    ↓ (@mention bot)
-nanoclaw 进程
-    ↓ (spawn container)
-Docker 容器 (Claude Agent SDK)
-    ↓ (执行任务)
-结果流式返回线程
+Discord / Slack
+    |  (@mention bot)
+    v
+nanoclaw process
+    |  (spawn container)
+    v
+Docker container (Claude Agent SDK)
+    |  (execute task)
+    v
+Results streamed back to thread
 ```
 
-**核心特性**：
-- Discord/Slack 双频道支持
-- 线程级隔离（每个任务独立线程）
-- 会话持续性（跨消息保持上下文）
-- Docker 容器安全隔离
-- 90 分钟超时（适合策略回测）
+**Core Features:**
 
-## 添加频道
+- **Multi-channel support** — Discord and Slack out of the box
+- **Thread-level isolation** — each task runs in its own thread
+- **Session persistence** — context is maintained across messages
+- **Docker container sandboxing** — secure, isolated execution
+- **90-minute timeout** — suitable for long-running tasks like strategy backtesting
 
-nanoclaw 使用 skill 系统动态添加频道：
+## Adding Channels
+
+Devbox uses a skill system to dynamically add channel integrations:
 
 ```bash
-# 在 claude CLI 中运行
-/add-discord   # 添加 Discord 支持
-/add-slack     # 添加 Slack 支持
-/add-telegram  # 添加 Telegram 支持
+# Run inside the Claude CLI
+/add-discord   # Add Discord support
+/add-slack     # Add Slack support
+/add-telegram  # Add Telegram support
 ```
 
-详见 [apps/nanoclaw/README.md](apps/nanoclaw/README.md)
+See [apps/nanoclaw/README.md](apps/nanoclaw/README.md) for details.
 
-## 文档
+## Project Structure
 
-- [RFC 003](docs/RFC/RFC%20003:%20Nanoclaw-Based%20Orchestrator.md) - 架构规范
-- [MVP 设计](docs/plans/2026-03-03-nanoclaw-mvp.md) - 实现计划
-- [RFC 002](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) - 旧架构（已归档）
+```
+devbox-poc/
+├── apps/
+│   └── nanoclaw/              # nanoclaw fork
+│       ├── src/
+│       │   ├── channels/      # Discord, Slack, WhatsApp adapters
+│       │   ├── container-runner.ts
+│       │   ├── group-queue.ts
+│       │   ├── config.ts
+│       │   └── index.ts
+│       ├── container/
+│       │   ├── Dockerfile
+│       │   ├── entrypoint.sh
+│       │   └── agent-runner/
+│       ├── groups/            # Runtime data
+│       └── data/              # SQLite storage
+├── docs/
+│   ├── RFC/
+│   │   ├── RFC 003            # Current architecture spec
+│   │   └── RFC 002            # Legacy spec (archived)
+│   └── plans/
+│       └── 2026-03-03-nanoclaw-mvp.md
+├── examples/tasks/            # Example TASK.md files
+└── README.md
+```
 
-## 旧实现
+## Documentation
 
-RFC 002 的 Incus-based 实现已归档到 `archive/` 目录，仅供参考。
+- [RFC 003 — Nanoclaw-Based Orchestrator](docs/RFC/RFC%20003:%20Nanoclaw-Based%20Orchestrator.md) — Architecture specification
+- [MVP Design](docs/plans/2026-03-03-nanoclaw-mvp.md) — Implementation plan
+- [RFC 002 — Devbox Control Plane](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) — Legacy architecture (archived)
+
+## Legacy Implementation
+
+The original RFC 002 Incus-based implementation has been archived to the `archive/` directory for reference only.
 
 ## License
 
