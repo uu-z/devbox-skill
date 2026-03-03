@@ -2,6 +2,10 @@
   "name": "devbox-poc",
   "version": "0.3.0",
   "description": "AI编码agent自动实现和回测交易策略",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "bin": {
     "devbox": "bin/devbox"
   },

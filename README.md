@@ -1,139 +1,67 @@
-# Devbox Control Plane
+# Devbox - AI Agent Orchestrator
 
-AI coding agent控制平面，完全符合RFC 002规范。
+基于 [nanoclaw](https://github.com/qwibitai/nanoclaw) 的 AI 编码 agent 编排系统，支持 Discord/Slack 多人协作。
 
 ## 快速开始
 
-### 方式 1: Claude Code / OpenClaw Skill (推荐)
-
 ```bash
-# 安装 skill
-ln -s $(pwd)/skills/devbox ~/.claude/skills/devbox
+cd apps/nanoclaw
 
-# 使用
-/devbox echo hello, date, uname -a
-```
+# 1. 安装依赖
+npm install
 
-详见 [skills/devbox/INSTALL.md](skills/devbox/INSTALL.md)
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env，填入 ANTHROPIC_API_KEY 和频道 token
 
-### 方式 2: 直接使用 CLI
+# 3. 构建 Docker 镜像
+cd container && ./build.sh
 
-**快速测试**：
-```bash
-# 运行 E2E 测试（使用预定义示例）
-./test-e2e.sh
-
-# 或手动运行示例任务
-bun run apps/cli/src/devbox.ts start \
-  --task examples/tasks/backtest-ma.md \
-  --vm devbox-default \
-  --id test-001
-```
-
-查看更多示例：[examples/tasks/README.md](examples/tasks/README.md)
-
-#### Linux环境
-```bash
-# 安装Incus
-sudo snap install incus
-incus admin init --minimal
-
-# 运行demo
-cd apps/cli
-./demo.sh
-```
-
-### macOS/Windows (使用Colima)
-```bash
-# 安装Colima (macOS)
-brew install colima
-
-# 启动Colima with Incus
-colima start --vm-type=vz --vz-rosetta --mount-type=virtiofs
-
-# 在Colima中安装Incus
-colima ssh
-sudo snap install incus
-sudo incus admin init --minimal
-exit
-
-# 运行demo
-cd apps/cli
-./demo.sh
+# 4. 启动服务
+npm run dev
 ```
 
 ## 架构
 
 ```
-┌──────────────────┐ ┌──────────────────┐ ┌────────────────────┐
-│ Orchestrator │ │ Control Plane │ │ Devbox VM │
-│ (OpenClaw, │ CLI │ │ incus │ │
-│ Claude Code, │ ──────> │ devbox (CLI) │ exec / │ /home/devbox/ │
-│ human) │ │ devboxd (daemon) │ file │ runs/<id>/ │
-│ │ <────── │ │ ────> │ workspace/ │
-│ │ JSON / │ │ │ CONTROL/ │
-│ │ notify │ │ <──── │ coding agent │
-└──────────────────┘ └──────────────────┘ files └────────────────────┘
+Discord/Slack
+    ↓ (@mention bot)
+nanoclaw 进程
+    ↓ (spawn container)
+Docker 容器 (Claude Agent SDK)
+    ↓ (执行任务)
+结果流式返回线程
 ```
 
-## RFC 002功能
+**核心特性**：
+- Discord/Slack 双频道支持
+- 线程级隔离（每个任务独立线程）
+- 会话持续性（跨消息保持上下文）
+- Docker 容器安全隔离
+- 90 分钟超时（适合策略回测）
 
-| 功能 | 状态 |
-|------|------|
-| Incus VM管理 | ✓ |
-| Run生命周期 | ✓ |
-| Agent执行器 | ✓ |
-| 文件协议 (TASK.md, STATUS.json, EVENTS.log, HANDOFF.md) | ✓ |
-| CONTROL/ Steering | ✓ |
-| 状态机 (pending, running, needs_attention, completed, failed, stopped) | ✓ |
-| Daemon监控 | ✓ |
-| Crash detection | ✓ |
-| Webhook通知 | ✓ |
-| OpenClaw集成 | ✓ |
+## 添加频道
 
-## 命令
+nanoclaw 使用 skill 系统动态添加频道：
 
 ```bash
-# VM管理
-devbox vm create --id <vm_id> --image <image>
-devbox vm destroy <vm_id>
-
-# Run管理
-devbox start --task <file> --vm <vm_id> --id <run_id>
-devbox status <run_id> --vm <vm_id>
-devbox events <run_id> --vm <vm_id> [--follow]
-devbox list --vm <vm_id>
-devbox stop <run_id> --vm <vm_id>
-
-# Steering
-devbox steer <run_id> --vm <vm_id> --cmd <command> [--instruction <file>]
-
-# 调试
-devbox snapshot <run_id> --vm <vm_id> [--output <file>]
-devbox handoff <run_id> --vm <vm_id>
-devbox get <run_id> --vm <vm_id> --output-dir <path>
+# 在 claude CLI 中运行
+/add-discord   # 添加 Discord 支持
+/add-slack     # 添加 Slack 支持
+/add-telegram  # 添加 Telegram 支持
 ```
 
-## 为什么使用Incus
-
-1. **RFC 002标准** - 完全符合规范
-2. **完整Linux环境** - 系统容器，不是应用容器
-3. **更好的隔离** - CPU/内存/网络独立
-4. **生产就绪** - 稳定可靠
-
-Incus是唯一支持的后端，提供完整的系统容器能力。
+详见 [apps/nanoclaw/README.md](apps/nanoclaw/README.md)
 
 ## 文档
 
-- [RFC 002](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) - 完整规范
-- [Incus测试指南](docs/TESTING-INCUS.md) - 详细安装和测试
-- [快速开始](QUICKSTART.md) - 5分钟上手
+- [RFC 003](docs/RFC/RFC%20003:%20Nanoclaw-Based%20Orchestrator.md) - 架构规范
+- [MVP 设计](docs/plans/2026-03-03-nanoclaw-mvp.md) - 实现计划
+- [RFC 002](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) - 旧架构（已归档）
 
-## 下一步
+## 旧实现
 
-1. ~~实现Agent执行逻辑~~ ✅
-2. ~~与Orchestrator集成~~ ✅
-3. 生产环境部署
+RFC 002 的 Incus-based 实现已归档到 `archive/` 目录，仅供参考。
 
 ## License
 
