@@ -1,172 +1,99 @@
-# Devbox Control Plane
+# Devbox - AI Agent Orchestrator
 
-A control plane for orchestrating AI coding agents inside isolated [Incus](https://linuxcontainers.org/incus/) VMs. Fully compliant with the RFC 002 specification.
+An AI coding agent orchestration system built on [nanoclaw](https://github.com/qwibitai/nanoclaw), with Discord/Slack multi-user collaboration support.
 
-Devbox lets you launch, monitor, steer, and collect results from autonomous coding agents running in sandboxed Linux environments — all through a simple CLI or as a Claude Code / OpenClaw skill.
+## Quick Start
 
-## Features
+```bash
+cd apps/nanoclaw
 
-| Feature | Status |
-|---|---|
-| Incus VM provisioning & management | Done |
-| Run lifecycle (start / status / stop) | Done |
-| Agent executor | Done |
-| File protocol (TASK.md, STATUS.json, EVENTS.log, HANDOFF.md) | Done |
-| CONTROL/ steering | Done |
-| State machine (pending, running, needs\_attention, completed, failed, stopped) | Done |
-| Daemon monitoring (`devboxd`) | Done |
-| Crash detection | Done |
-| Webhook notifications | Done |
-| Claude Code / OpenClaw integration | Done |
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env and fill in ANTHROPIC_API_KEY and channel tokens
+
+# 3. Build the Docker image
+cd container && ./build.sh
+
+# 4. Start the service
+npm run dev
+```
 
 ## Architecture
 
 ```
-+--------------------+      +--------------------+      +----------------------+
-|   Orchestrator     |      |   Control Plane    |      |     Devbox VM        |
-|  (OpenClaw,        | CLI  |                    | incus|                      |
-|   Claude Code,     | ---> |  devbox  (CLI)     | exec |  /home/devbox/       |
-|   human)           |      |  devboxd (daemon)  | file |  runs/<id>/          |
-|                    | <--- |                    | ---> |    workspace/        |
-|                    | JSON |                    |      |    CONTROL/          |
-|                    | notify                    | <--- |    coding agent      |
-+--------------------+      +--------------------+ files+----------------------+
+Discord / Slack
+    |  (@mention bot)
+    v
+nanoclaw process
+    |  (spawn container)
+    v
+Docker container (Claude Agent SDK)
+    |  (execute task)
+    v
+Results streamed back to thread
 ```
 
-1. The **Orchestrator** (a human, Claude Code, or OpenClaw) submits a task via the CLI.
-2. The **Control Plane** creates or reuses an Incus VM, writes the task, and launches the agent.
-3. The **Devbox VM** executes the task in full isolation, communicating progress through the RFC 002 file protocol.
+**Core Features:**
 
-## Quick Start
+- **Multi-channel support** — Discord and Slack out of the box
+- **Thread-level isolation** — each task runs in its own thread
+- **Session persistence** — context is maintained across messages
+- **Docker container sandboxing** — secure, isolated execution
+- **90-minute timeout** — suitable for long-running tasks like strategy backtesting
 
-### Option 1: Claude Code / OpenClaw Skill (Recommended)
+## Adding Channels
+
+Devbox uses a skill system to dynamically add channel integrations:
 
 ```bash
-# Install the skill
-ln -s $(pwd)/skills/devbox ~/.claude/skills/devbox
-
-# Run a task
-/devbox echo hello, date, uname -a
+# Run inside the Claude CLI
+/add-discord   # Add Discord support
+/add-slack     # Add Slack support
+/add-telegram  # Add Telegram support
 ```
 
-See [skills/devbox/INSTALL.md](skills/devbox/INSTALL.md) for detailed installation and usage.
-
-### Option 2: CLI
-
-**Run the E2E test suite (uses bundled example tasks):**
-
-```bash
-./test-e2e.sh
-```
-
-**Or run a task manually:**
-
-```bash
-bun run apps/cli/src/devbox.ts start \
-  --task examples/tasks/backtest-ma.md \
-  --vm devbox-default \
-  --id test-001
-```
-
-See [examples/tasks/README.md](examples/tasks/README.md) for more example tasks.
-
-## Installation
-
-### Linux
-
-```bash
-# Install Incus
-sudo snap install incus
-incus admin init --minimal
-
-# Run the demo
-cd apps/cli
-./demo.sh
-```
-
-### macOS / Windows (via Colima)
-
-```bash
-# Install Colima (macOS)
-brew install colima
-
-# Start Colima with virtualization support
-colima start --vm-type=vz --vz-rosetta --mount-type=virtiofs
-
-# Install Incus inside Colima
-colima ssh
-sudo snap install incus
-sudo incus admin init --minimal
-exit
-
-# Run the demo
-cd apps/cli
-./demo.sh
-```
-
-## CLI Reference
-
-### VM Management
-
-```bash
-devbox vm create --id <vm_id> --image <image>
-devbox vm destroy <vm_id>
-```
-
-### Run Management
-
-```bash
-devbox start   --task <file> --vm <vm_id> --id <run_id>
-devbox status  <run_id>  --vm <vm_id>
-devbox events  <run_id>  --vm <vm_id> [--follow]
-devbox list    --vm <vm_id>
-devbox stop    <run_id>  --vm <vm_id>
-```
-
-### Steering
-
-```bash
-devbox steer <run_id> --vm <vm_id> --cmd <command> [--instruction <file>]
-```
-
-### Debugging
-
-```bash
-devbox snapshot <run_id> --vm <vm_id> [--output <file>]
-devbox handoff  <run_id> --vm <vm_id>
-devbox get      <run_id> --vm <vm_id> --output-dir <path>
-```
+See [apps/nanoclaw/README.md](apps/nanoclaw/README.md) for details.
 
 ## Project Structure
 
-This is a [Turborepo](https://turbo.build/) monorepo with the following packages:
-
-| Package | Description |
-|---|---|
-| `apps/cli` | CLI binaries (`devbox` and `devboxd`) |
-| `packages/core` | Core library — interfaces, protocol, Incus/local provisioners, agent logic |
-| `packages/skill` | Claude Code skill installer |
-| `skills/devbox` | Skill definition (SKILL.md, INSTALL.md, skill.ts) |
-| `examples/tasks` | Example TASK.md files for testing |
-
-## Why Incus?
-
-- **RFC 002 compliant** — the only supported backend, designed around the spec.
-- **Full Linux environment** — system containers, not application containers. Agents get a real OS.
-- **Strong isolation** — independent CPU, memory, and network per VM.
-- **Production-ready** — stable, well-maintained, and battle-tested.
+```
+devbox-poc/
+├── apps/
+│   └── nanoclaw/              # nanoclaw fork
+│       ├── src/
+│       │   ├── channels/      # Discord, Slack, WhatsApp adapters
+│       │   ├── container-runner.ts
+│       │   ├── group-queue.ts
+│       │   ├── config.ts
+│       │   └── index.ts
+│       ├── container/
+│       │   ├── Dockerfile
+│       │   ├── entrypoint.sh
+│       │   └── agent-runner/
+│       ├── groups/            # Runtime data
+│       └── data/              # SQLite storage
+├── docs/
+│   ├── RFC/
+│   │   ├── RFC 003            # Current architecture spec
+│   │   └── RFC 002            # Legacy spec (archived)
+│   └── plans/
+│       └── 2026-03-03-nanoclaw-mvp.md
+├── examples/tasks/            # Example TASK.md files
+└── README.md
+```
 
 ## Documentation
 
-- [RFC 002 — Devbox Control Plane Specification](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md)
-- [Incus Testing Guide](docs/TESTING-INCUS.md)
-- [Quick Start Guide](QUICKSTART.md)
+- [RFC 003 — Nanoclaw-Based Orchestrator](docs/RFC/RFC%20003:%20Nanoclaw-Based%20Orchestrator.md) — Architecture specification
+- [MVP Design](docs/plans/2026-03-03-nanoclaw-mvp.md) — Implementation plan
+- [RFC 002 — Devbox Control Plane](docs/RFC/RFC%20002:%20Devbox%20Control%20Plane.md) — Legacy architecture (archived)
 
-## Roadmap
+## Legacy Implementation
 
-- [x] Agent executor logic
-- [x] Orchestrator integration
-- [ ] Production deployment
+The original RFC 002 Incus-based implementation has been archived to the `archive/` directory for reference only.
 
 ## License
 
